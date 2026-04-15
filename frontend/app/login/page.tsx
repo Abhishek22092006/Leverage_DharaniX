@@ -4,21 +4,33 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ShieldIcon, Mail, Lock, ArrowRight, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { loginUser } from '@/lib/api'
 
 export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError('')
     setIsLoading(true)
-    
-    // Simulate authentication
-    setTimeout(() => {
-      router.push('/')
-    }, 1000)
+    console.log('Login request sent:', email)
+    try {
+      const res = await loginUser({ email, password })
+      console.log('Login response:', res)
+      const token = res.data?.access_token
+      if (token) {
+        localStorage.setItem('token', token)
+      }
+      router.push('/dashboard')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Login failed')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleGuestAccess = () => {
@@ -116,6 +128,13 @@ export default function LoginPage() {
                 Forgot password?
               </button>
             </div>
+
+            {/* Error Message */}
+            {error && (
+              <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2.5">
+                {error}
+              </p>
+            )}
 
             {/* Submit Button */}
             <div className="pt-2">

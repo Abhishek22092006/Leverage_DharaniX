@@ -1,19 +1,93 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, CheckCircle2, Shield as ShieldIcon } from 'lucide-react'
+import { Search, CheckCircle2, Shield as ShieldIcon, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export default function LandLedgerLanding() {
   const router = useRouter()
   const [searchValue, setSearchValue] = useState('')
   const [isSearchFocused, setIsSearchFocused] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [status, setStatus] = useState('')
+  const [apiStatus, setApiStatus] = useState('')
 
-  const handleSearch = (e: React.FormEvent) => {
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        const response = await fetch("http://127.0.0.1:8000/", {
+          method: "GET"
+        })
+        const data = await response.json()
+        console.log("Health:", data)
+        setStatus("Server is running")
+      } catch (error) {
+        console.error(error)
+        setStatus("Server is down")
+      }
+    }
+
+    const checkApiHealth = async () => {
+      try {
+        const response = await fetch("http://127.0.0.1:8000/api/health", {
+          method: "GET"
+        })
+        const data = await response.json()
+        console.log("API Health:", data)
+        setApiStatus("API is healthy")
+      } catch (error) {
+        console.error(error)
+        setApiStatus("API is not responding")
+      }
+    }
+
+    checkHealth()
+    checkApiHealth()
+  }, [])
+
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (searchValue.trim()) {
-      router.push(`/result?query=${encodeURIComponent(searchValue)}`)
+    if (!searchValue.trim()) return
+
+    try {
+      setLoading(true)
+      setError('')
+
+      const response = await fetch(
+        `http://127.0.0.1:8000/api/public/properties/search?survey_number=${encodeURIComponent(searchValue)}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json"
+          }
+        }
+      )
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Search failed")
+      }
+
+      const items = data.items || data.data?.items || data
+      if (!items || items.length === 0) {
+        setError("No property found")
+        return
+      }
+
+      // take first result
+      const property = items[0]
+      console.log("Search result:", property)
+
+      // navigate using numeric ID natively
+      router.push(`/result?query=${property.id}`)
+    } catch (err: any) {
+      console.error("Search error:", err)
+      setError(err.message || "Failed to search properties")
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -55,6 +129,13 @@ export default function LandLedgerLanding() {
                 <span className="text-xl font-light tracking-widest text-zinc-100 uppercase">
                   DharaniX
                 </span>
+                {(status || apiStatus) && (
+                  <span className={`ml-3 px-2 py-1 rounded-md bg-black/20 text-xs font-medium tracking-wide border border-white/5 shadow-inner ${
+                    status === 'Server is running' && apiStatus === 'API is healthy' ? 'text-green-400' : 'text-red-400'
+                  }`}>
+                    • {status === 'Server is running' ? 'Server: OK' : 'Server: Down'} | {apiStatus === 'API is healthy' ? 'API: OK' : 'API: Down'}
+                  </span>
+                )}
               </div>
               <Button
                 variant="ghost"
@@ -102,12 +183,16 @@ export default function LandLedgerLanding() {
                     />
                     <Button
                       type="submit"
+                      disabled={loading}
                       className="bg-zinc-100 text-zinc-900 hover:bg-white rounded-xl px-6 sm:px-8 py-6 h-auto font-medium text-sm sm:text-base flex-shrink-0 transition-all duration-300 shadow-[0_5px_20px_rgba(255,255,255,0.15)] hover:shadow-[0_10px_30px_rgba(255,255,255,0.25)] hover:-translate-y-1"
                     >
-                      Search
+                      {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Search'}
                     </Button>
                   </div>
                 </form>
+                {error && (
+                  <p className="mt-4 text-red-400 text-sm">{error}</p>
+                )}
               </div>
 
               {/* Feature Indicators */}

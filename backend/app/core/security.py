@@ -17,7 +17,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def hash_password(password: str) -> str:
-    """Hash a plain password using bcrypt."""
+    password = password[:72]  # 🔥 FIX
     return pwd_context.hash(password)
 
 

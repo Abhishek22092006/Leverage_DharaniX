@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ShieldIcon, Mail, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { registerUser } from '@/lib/api'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -14,6 +15,8 @@ export default function SignupPage() {
     confirmPassword: ''
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [role, setRole] = useState<'user' | 'admin'>('user')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
@@ -26,12 +29,32 @@ export default function SignupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError('')
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match')
+      return
+    }
+
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters')
+      return
+    }
+
     setIsLoading(true)
-    
-    // Simulate account creation
-    setTimeout(() => {
-      router.push('/')
-    }, 1000)
+    try {
+      await registerUser({
+        email: formData.email,
+        password: formData.password,
+        full_name: formData.name,
+        role,
+      })
+      router.push('/login')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Registration failed')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleGuestAccess = () => {
@@ -136,6 +159,27 @@ export default function SignupPage() {
               </div>
             </div>
 
+            {/* Role Selection */}
+            <div className="space-y-2">
+              <label className="text-sm text-slate-300">Account Type</label>
+              <div className="flex gap-3">
+                {(['user', 'admin'] as const).map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setRole(r)}
+                    className={`flex-1 h-11 rounded-xl text-sm font-medium transition-all duration-200 border capitalize ${
+                      role === r
+                        ? 'bg-white/20 border-white/40 text-white shadow-[0_0_12px_rgba(255,255,255,0.15)]'
+                        : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    {r === 'user' ? '👤 User' : '🔑 Admin'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Terms and Conditions */}
             <div className="flex items-start gap-3">
               <input
@@ -154,6 +198,13 @@ export default function SignupPage() {
                 </button>
               </label>
             </div>
+
+            {/* Error Message */}
+            {error && (
+              <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2.5">
+                {error}
+              </p>
+            )}
 
             {/* Submit Button */}
             <Button
