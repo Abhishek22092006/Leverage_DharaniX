@@ -15,6 +15,7 @@ export default function PropertyDetailPage() {
   const [encumbrances, setEncumbrances] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+  const [isDownloading, setIsDownloading] = useState(false)
 
   const [formData, setFormData] = useState({
     deed_type: '',
@@ -216,6 +217,46 @@ export default function PropertyDetailPage() {
       setSubmitError(err.message || "Failed to save deed")
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handleDownloadReport = async () => {
+    try {
+      setIsDownloading(true)
+      const response = await fetch(`http://127.0.0.1:8000/api/properties/${id}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch report data")
+      }
+
+      const data = await response.json()
+
+      // Convert JSON to downloadable file
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+      })
+
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `property-report-${id}.json`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+
+      window.URL.revokeObjectURL(url)
+
+    } catch (error) {
+      console.error("Download failed:", error)
+      alert("Failed to download report")
+    } finally {
+      setIsDownloading(false)
     }
   }
 
@@ -597,9 +638,12 @@ export default function PropertyDetailPage() {
             New Search
           </Button>
           <Button 
+            onClick={handleDownloadReport}
+            disabled={isDownloading}
             className="bg-white/90 text-slate-900 hover:bg-white hover:scale-105 transition-all duration-200 font-light px-8 py-3"
           >
-            Download Report
+            {isDownloading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+            {isDownloading ? "Downloading..." : "Download Report"}
           </Button>
         </div>
       </div>
