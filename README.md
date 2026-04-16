@@ -113,6 +113,7 @@ npm run dev
 
 🌐 Frontend URL
 http://localhost:3000
+
 🔗 API Overview
 🔍 Public APIs
 GET /api/public/properties/search
@@ -175,5 +176,3 @@ Achieved Top 7 out of 50 teams
 ⭐ Conclusion
 DharaniX simplifies land verification by transforming complex property data into a fast, transparent, and actionable report, helping reduce fraud and improve trust in property transactions.
 ---
-
-Just tell me 👍
